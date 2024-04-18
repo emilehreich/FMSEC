@@ -1,0 +1,84 @@
+theory P1
+begin
+
+section{* 1.1 PACE - Challenge Response Protocol *}
+
+/*
+  Protocol:
+    1. A -> B: x
+    2. B -> A: [x]_k(B,A)
+*/
+
+
+functions:
+    mac/2, vfy/3
+
+equations:
+    vfy(K, A, B, mac(K, A, B)) = True
+    vfy(K, A, B, x) = False
+    mac(K, A, B) = x
+    
+    
+// Key Infrastructure
+rule Resgister_Key:
+    [ Fr(~ltk) ]
+    -->
+    [ !Ltk($A, $B, ~ltk) ]
+
+
+// Protocol Rules
+
+rule Init_A:
+    [ Fr(~id), !Ltk(B, A, skBA) ]
+  --[ Create($A, ~id, 'roleA')
+    ]->
+    [ St_A_1($A, ~id, $B, skBA)]
+
+rule Init_B:
+    [ Fr(~id), !Ltk(B, A, skBA) ]
+  --[ Create($B, ~id, 'roleB')
+    ]->
+    [ St_B_1($B, ~id, $A, skBA)]
+
+rule A_1_Send:
+    [ St_A_1($A, ~id, $B, skBA) 
+    , Fr(~x)
+    ]
+  --[ Send($A, $B, ~id, ~x)
+    ]->
+    [ St_A_2($A, ~id, $B, skBA, ~x) 
+      Out(~x)
+    ]
+
+rule B_1_Recv:
+    [ St_B_1($B, ~id, $A, skBA)
+    , In(~x)
+    ]
+  --[ Recv($B, ~x)
+    ]->
+    [ St_B_2($B, ~id, $A, skBA, ~x)
+    ]
+
+rule B_2_Send:
+    [ St_B_2($B, ~id, $A, skBA, ~x)
+    ]
+  --[ Send($B, $A, ~id, mac(skBA, ~x))
+    ]->
+    [ St_B_3($B, ~id, $A, skBA, mac(skBA, ~x))
+      Out(mac(skBA, ~x))
+    ]
+
+rule A_2_Recv:
+    [ St_A_2($A, ~id, $B, skBA, ~x)
+    , In(mac(skBA, ~x))
+    ]
+  --[ Recv($A, mac(skBA, ~x))
+    ]->
+    [ St_A_3($A, ~id, $B, skBA, ~x, mac(skBA, ~x))
+    ]
+
+
+// Security Properties
+
+end
+
