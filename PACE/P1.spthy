@@ -14,31 +14,18 @@ functions:
     mac/2, vfy/3
 
 equations:
-    vfy(K, A, B, mac(K, A, B)) = True
-    vfy(K, A, B, x) = False
-    mac(K, A, B) = x
-    
-    
-// Key Infrastructure
-rule Resgister_Key:
-    [ Fr(~ltk) ]
-    -->
-    [ !Ltk($A, $B, ~ltk) ]
+    vfy(K, mac(K, msg), msg) = True
 
 
 // Protocol Rules
-
-rule Init_A:
-    [ Fr(~id), !Ltk(B, A, skBA) ]
-  --[ Create($A, ~id, 'roleA')
+rule Init:
+    [ Fr(~id), Fr(~skAB), Fr(~skBA) ]
+  --[ Create($A, ~id, 'Alice', ~skAB, ~skBA)
+    , Create($B, ~id, 'Bob', ~skBA, ~skAB)
     ]->
-    [ St_A_1($A, ~id, $B, skBA)]
-
-rule Init_B:
-    [ Fr(~id), !Ltk(B, A, skBA) ]
-  --[ Create($B, ~id, 'roleB')
-    ]->
-    [ St_B_1($B, ~id, $A, skBA)]
+    [ St_A_1($A, ~id, $B, ~skAB, ~skBA)
+    , St_B_1($B, ~id, $A, ~skAB, ~skBA)
+    ]
 
 rule A_1_Send:
     [ St_A_1($A, ~id, $B, skBA) 
@@ -78,7 +65,12 @@ rule A_2_Recv:
     ]
 
 
+// restrictions
+restriction Equality:
+	"All x y #i. Eq(x,y) @i ==> x = y"
+
 // Security Properties
+lemma L1:
 
 end
 
