@@ -8,7 +8,7 @@ section{* 1.3 PACE - Introducing a Session Key *}
     1. A -> B: x
     2. B -> A: y
     3. A -> B: [x, y]_kab
-    4. B -> A: [y, x]_kba
+    4. B -> A: [y, x]_kab
 
 */
 
@@ -93,29 +93,23 @@ rule B_3_Receive:
     ]
 
 rule B_4_Send:
-    let 
-        kba = kdf(~skBA, ~x, ~y)
-    in
-    [ St_B_4($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kba, ~y))
+    [ St_B_4($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y))
     ]
-  --[ Send($B, mac(kba, ~x))
+  --[ Send($B, mac(kab, ~x))
     ]->
-    [ St_B_5($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y), kba, mac(kba, ~x))
-    , Out(mac(kba, ~x))
+    [ St_B_5($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y), mac(kab, ~x))
+    , Out(mac(kab, ~x))
     ]
 
 rule A_4_Receive:
-    let 
-        kba = kdf(~skBA, ~x, ~y)
-    in
     [ St_A_4($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y))
-    , In(mac(kba, ~x))
+    , In(mac(kab, ~x))
     ]
-  --[ Recv($A, mac(kba, ~x))
-      , Eq(vfy(kba, mac(kba, ~x), ~x), true)
+  --[ Recv($A, mac(kab, ~x))
+      , Eq(vfy(kab, mac(kab, ~x), ~x), true)
       , Authenticated($B, $A)
     ]->
-    [ St_A_5($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y), kba, mac(kba, ~x))
+    [ St_A_5($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y), mac(kab, ~x))
     ]
 
 // restrictions
