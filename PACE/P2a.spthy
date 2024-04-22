@@ -6,7 +6,10 @@ section{* 1.2 PACE - Mutual Authentication *}
 /*
   Protocol:
     1. A -> B: x
-    2. B -> A: [x]_k(B,A)
+    2. B -> A: y
+    3. A -> B: [x, y]_k(B,A)
+    4. B -> A: [y, x]_k(A,B)
+
 */
 
 functions:
