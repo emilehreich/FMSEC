@@ -47,9 +47,9 @@ rule B_1_Receive:
 rule B_2_Send:
     [ St_B_2($B, ~id, $A, ~skAB, ~skBA, ~x)
     ]
-  --[ Send($B, $A, mac(~skBA, ~x))
+  --[ Send($B, mac(~skBA, ~x))
     ]->
-    [ St_B_3($B, ~id, $A, ~skAB, ~skBA, mac(~skBA, ~x))
+    [ St_B_3($B, ~id, $A, ~skAB, ~skBA, ~x, mac(~skBA, ~x))
     , Out(mac(~skBA, ~x))
     ]
 
