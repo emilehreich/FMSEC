@@ -1,0 +1,20 @@
+// Security Properties
+lemma Executability:
+  exists-trace
+    "Ex A B #i #j. 
+       Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j)"
+
+lemma Mutual_Agreement_on_half_keys_and_key:
+  "All A B gx gy Kab #i #j. Send(A, B, gx, gy, Kab)@i & Recv(B, A, gx, gy, Kab)@j ==> #i < #j"
+
+lemma Session_Key_Secrecy:
+  "All A B Kab #i. St_A_2(A, _, B, _, Kab, _)@i ==> 
+    not (Ex #j. K(Kab)@j & not Honest(A, #j) & not Honest(B, #j))"
+
+lemma Freshness_of_half_keys_and_key:
+  "All A B gx gy Kab #i. Send(A, B, gx, gy, Kab)@i ==> 
+    New(gx, gy, Kab)@i"
+
+lemma Nonce_Secrecy:
+  "All A B s #i. St_A_1(A, _, B, _, s, _, _)@i ==> 
+    not (Ex #j. K(s)@j & not Honest(A, #j) & not Honest(B, #j))"
