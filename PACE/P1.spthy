@@ -9,13 +9,11 @@ section{* 1.1 PACE - Challenge Response Protocol *}
     2. B -> A: [x]_k(B,A)
 */
 
-
 functions:
-    mac/2, vfy/3
+  mac/2, vfy/3, true/0
 
 equations:
-    vfy(K, mac(K, msg), msg) = True
-
+  vfy(k, mac(k, msg), msg) = true
 
 // Protocol Rules
 rule Init:
@@ -28,40 +26,42 @@ rule Init:
     ]
 
 rule A_1_Send:
-    [ St_A_1($A, ~id, $B, skBA) 
+    [ St_A_1($A, ~id, $B, ~skAB, ~skBA)
     , Fr(~x)
     ]
-  --[ Send($A, $B, ~id, ~x)
+  --[ Send($A, $B, ~x)
     ]->
-    [ St_A_2($A, ~id, $B, skBA, ~x) 
-      Out(~x)
+    [ St_A_2($A, ~id, $B, ~skAB, ~skBA, ~x)
+    , Out(~x)
     ]
 
-rule B_1_Recv:
-    [ St_B_1($B, ~id, $A, skBA)
+rule B_1_Receive:
+    [ St_B_1($B, ~id, $A, ~skAB, ~skBA)
     , In(~x)
     ]
   --[ Recv($B, ~x)
     ]->
-    [ St_B_2($B, ~id, $A, skBA, ~x)
+    [ St_B_2($B, ~id, $A, ~skAB, ~skBA, ~x)
     ]
 
 rule B_2_Send:
-    [ St_B_2($B, ~id, $A, skBA, ~x)
+    [ St_B_2($B, ~id, $A, ~skAB, ~skBA, ~x)
     ]
-  --[ Send($B, $A, ~id, mac(skBA, ~x))
+  --[ Send($B, $A, mac(~skBA, ~x))
     ]->
-    [ St_B_3($B, ~id, $A, skBA, mac(skBA, ~x))
-      Out(mac(skBA, ~x))
+    [ St_B_3($B, ~id, $A, ~skAB, ~skBA, mac(~skBA, ~x))
+    , Out(mac(~skBA, ~x))
     ]
 
-rule A_2_Recv:
-    [ St_A_2($A, ~id, $B, skBA, ~x)
-    , In(mac(skBA, ~x))
+rule A_2_Receive:
+    [ St_A_2($A, ~id, $B, ~skAB, ~skBA, ~x)
+    , In(mac(~skBA, ~x))
     ]
-  --[ Recv($A, mac(skBA, ~x))
+  --[ Recv($A, mac(~skBA, ~x))
+      , Eq(vfy(~skBA, mac(~skBA, ~x), ~x), true)
+      , Authenticated($A, $B)
     ]->
-    [ St_A_3($A, ~id, $B, skBA, ~x, mac(skBA, ~x))
+    [ St_A_3($A, ~id, $B, ~skAB, ~skBA, ~x, mac(~skBA, ~x))
     ]
 
 
@@ -70,7 +70,10 @@ restriction Equality:
 	"All x y #i. Eq(x,y) @i ==> x = y"
 
 // Security Properties
-lemma L1:
+lemma Executability:
+  exists-trace
+    "Ex A B #i. 
+       Authenticated(A, B)@i & not (A = B)"
 
 end
 
