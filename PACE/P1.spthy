@@ -75,5 +75,16 @@ lemma Executability:
     "Ex A B #i. 
        Authenticated(A, B)@i & not (A = B)"
 
+lemma Injective_Agreement_on_nonce:
+  "All A B x #i #j. Send(A, B, x)@i & Recv(B, x)@j ==> #i < #j"
+
+lemma Nonce_Secrecy:
+  "All A B x #i. St_A_3(A, _, B, _, _, x, _)@i ==> 
+    not (Ex #j. K(x)@j & not Honest(A, #j) & not Honest(B, #j))"
+
+lemma Freshness_of_nonce:
+  "All A B x #i. Send(A, B, x)@i ==> 
+    New(x)@i"
+
 end
 
