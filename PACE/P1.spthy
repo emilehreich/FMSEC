@@ -16,53 +16,90 @@ equations:
   vfy(k, mac(k, msg), msg) = true
 
 
-// Protocol Rules
-rule Init:
-    [ Fr(~id), Fr(~skAB), Fr(~skBA) ]
-  --[ Create($A, ~id, 'Alice', ~skAB, ~skBA)
-    , Create($B, ~id, 'Bob', ~skBA, ~skAB)
+// Key Infrastructure
+rule Shared_Key:
+  [ Fr(~sk)
+  ]
+--[ UniDKey($A, $B, ~sk)
+  ]->
+  [ !SKey($A, $B, ~sk)
+  ]
+
+rule Reveal_SKey_A:
+    [ !SKey(A, B, k) 
+    ]
+  --[ Reveal(A) 
     ]->
-    [ St_A_1($A, ~id, $B, ~skAB, ~skBA)
-    , St_B_1($B, ~id, $A, ~skAB, ~skBA)
+    [ Out(k) 
     ]
 
+rule Reveal_SKey_B:
+    [ !SKey(A, B, k) 
+    ]
+  --[ Reveal(B) 
+    ]->
+    [ Out(k) 
+    ]
+
+
+// -- Protocol Rules -- 
+// Thread Initialization
+
+rule Init_A:
+    [ Fr(~id)
+    , !SKey($A, $B, k)]
+  --[ Create($A, ~id, 'Alice', k)
+    ]->
+    [ St_A_1($A, ~id, $B, k)
+    ]
+
+rule Init_B:
+    [ Fr(~id)
+    , !SKey($A, $B, k)]
+  --[ Create($B, ~id, 'Bob', k)
+    ]->
+    [ St_B_1($B, ~id, $A, k)
+    ]
+
+// Protocol Messages
+
 rule A_1_Send:
-    [ St_A_1($A, ~id, $B, ~skAB, ~skBA)
+    [ St_A_1($A, ~id, $B, k)
     , Fr(~x)
     ]
   --[ Send($A, ~x)
     ]->
-    [ St_A_2($A, ~id, $B, ~skAB, ~skBA, ~x)
+    [ St_A_2($A, ~id, $B, k, ~x)
     , Out(~x)
     ]
 
 rule B_1_Receive:
-    [ St_B_1($B, ~id, $A, ~skAB, ~skBA)
+    [ St_B_1($B, ~id, $A, k)
     , In(~x)
     ]
   --[ Recv($B, ~x)
     ]->
-    [ St_B_2($B, ~id, $A, ~skAB, ~skBA, ~x)
+    [ St_B_2($B, ~id, $A, k, ~x)
     ]
 
 rule B_2_Send:
-    [ St_B_2($B, ~id, $A, ~skAB, ~skBA, ~x)
+    [ St_B_2($B, ~id, $A, k, ~x)
     ]
-  --[ Send($B, mac(~skBA, ~x))
+  --[ Send($B, mac(k, ~x))
     ]->
-    [ St_B_3($B, ~id, $A, ~skAB, ~skBA, ~x, mac(~skBA, ~x))
-    , Out(mac(~skBA, ~x))
+    [ St_B_3($B, ~id, $A, k, ~x, mac(k, ~x))
+    , Out(mac(k, ~x))
     ]
 
 rule A_2_Receive:
-    [ St_A_2($A, ~id, $B, ~skAB, ~skBA, ~x)
-    , In(mac(~skBA, ~x))
+    [ St_A_2($A, ~id, $B, k, ~x)
+    , In(mac(k, ~x))
     ]
-  --[ Recv($A, mac(~skBA, ~x))
-      , Eq(vfy(~skBA, mac(~skBA, ~x), ~x), true)
+  --[ Recv($A, mac(k, ~x))
+      , Eq(vfy(k, mac(k, ~x), ~x), true)
       , Authenticated($A, $B)
     ]->
-    [ St_A_3($A, ~id, $B, ~skAB, ~skBA, ~x, mac(~skBA, ~x))
+    [ St_A_3($A, ~id, $B, k, ~x, mac(k, ~x))
     ]
 
 
