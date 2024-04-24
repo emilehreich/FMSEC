@@ -84,6 +84,7 @@ rule B_1_Receive:
     , In(~x)
     ]
   --[ Recv($B, ~x)
+    , Running($B, $A, <'I', 'R', ~x>)
     ]->
     [ St_B_2($B, ~id, $A, k1, k2, ~x)
     ]
@@ -103,6 +104,7 @@ rule A_2_Receive:
     , In(~y)
     ]
   --[ Recv($A, ~y)
+    , Running($A, $B, <'R', 'I', ~y>)
     ]->
     [ St_A_3($A, ~id, $B, k1, k2, ~x, ~y)
     ]
@@ -123,6 +125,7 @@ rule B_3_Receive:
   --[ Recv($B, mac(k1, ~y))
     , Eq(vfy(k1, mac(k1, ~y), ~y), true)
     , Authenticated($A, $B)
+    , Commit($B, $A, <'R', 'I', ~y>)
     ]->
     [ St_B_4($B, ~id, $A, k1, k2, ~x, ~y, mac(k1, ~y))
     ]
@@ -143,6 +146,7 @@ rule A_4_Receive:
   --[ Recv($A, mac(k2, ~x))
       , Eq(vfy(k2, mac(k2, ~x), ~x), true)
       , Authenticated($B, $A)
+      , Commit($A, $B, <'I', 'R', ~x>)
     ]->
     [ St_A_5($A, ~id, $B, k1, k2, ~x, ~y, mac(k1, ~y), mac(k2, ~x))
     ]
@@ -164,7 +168,22 @@ lemma Executability:
     "Ex A B #i #j. 
        Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j)"
 
-// TODO - add more properties
+lemma injectiveagreementINITIATOR:
+  "All a b t #i.
+      Commit(a,b,<'I','R',t>)@i &
+      not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+      ==> (Ex #j. Running(b,a,<'I','R',t>)@j
+          & not (Ex a2 b2 #i2. Commit(a2,b2,<'I','R',t>)@i2
+          & not (#i2 = #i)))"
+
+lemma injectiveagreementRESPONDER:
+  "All a b t #i.
+      Commit(a,b,<'R','I',t>)@i &
+      not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+      ==> (Ex #j. Running(b,a,<'R','I',t>)@j
+          & not (Ex a2 b2 #i2. Commit(a2,b2,<'R','I',t>)@i2
+          & not (#i2 = #i)))"
+
 
 end
 
