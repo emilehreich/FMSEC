@@ -78,6 +78,7 @@ rule B_1_Receive:
     , In(~x)
     ]
   --[ Recv($B, ~x)
+    , Running($B, $A, <'I', 'R', ~x>)
     ]->
     [ St_B_2($B, ~id, $A, k, ~x)
     ]
@@ -98,6 +99,7 @@ rule A_2_Receive:
   --[ Recv($A, mac(k, ~x))
       , Eq(vfy(k, mac(k, ~x), ~x), true)
       , Authenticated($A, $B)
+      , Commit($A, $B, <'I', 'R', ~x>)
     ]->
     [ St_A_3($A, ~id, $B, k, ~x, mac(k, ~x))
     ]
@@ -118,6 +120,14 @@ lemma Executability:
   exists-trace
     "Ex A B #i. 
        Authenticated(A, B)@i & not (A = B)"
+
+lemma injectiveagreementINITIATOR:
+  "All a b t #i.
+      Commit(a,b,<'I','R',t>)@i &
+      not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+      ==> (Ex #j. Running(b,a,<'I','R',t>)@j
+          & not (Ex a2 b2 #i2. Commit(a2,b2,<'I','R',t>)@i2
+          & not (#i2 = #i)))"
 
 end
 
