@@ -18,6 +18,32 @@ functions:
 equations:
   vfy(k, mac(k, msg1, msg2), msg1, msg2) = true
 
+// Key Infrastructure
+rule Shared_Key:
+  [ Fr(~sk)
+  ]
+--[ UniDKey($A, $B, ~sk)
+  ]->
+  [ !SKey($A, $B, ~sk)
+  ]
+
+rule Reveal_SKey_A:
+    [ !SKey(A, B, k) 
+    ]
+  --[ Reveal(A) 
+    ]->
+    [ Out(k) 
+    ]
+
+rule Reveal_SKey_B:
+    [ !SKey(A, B, k) 
+    ]
+  --[ Reveal(B) 
+    ]->
+    [ Out(k) 
+    ]
+
+
 // Protocol Rules
 rule Init:
     [ Fr(~id), Fr(~skAB), Fr(~skBA) ]
