@@ -15,6 +15,7 @@ functions:
 equations:
   vfy(k, mac(k, msg), msg) = true
 
+
 // Protocol Rules
 rule Init:
     [ Fr(~id), Fr(~skAB), Fr(~skBA) ]
@@ -29,7 +30,7 @@ rule A_1_Send:
     [ St_A_1($A, ~id, $B, ~skAB, ~skBA)
     , Fr(~x)
     ]
-  --[ Send($A, $B, ~x)
+  --[ Send($A, ~x)
     ]->
     [ St_A_2($A, ~id, $B, ~skAB, ~skBA, ~x)
     , Out(~x)
