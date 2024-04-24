@@ -107,6 +107,12 @@ rule A_2_Receive:
 restriction Equality:
 	"All x y #i. Eq(x,y) @i ==> x = y"
 
+restriction KeyUnidirection:
+  "All A B k #i. 
+    UniDKey(A, B, k)@i &
+    UniDKey(B, A, k)@i 
+    ==> (A = B)"
+
 // Security Properties
 lemma Executability:
   exists-trace
