@@ -116,16 +116,21 @@ lemma Executability:
     "Ex A B #i #j. 
        Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j)"
 
-lemma Injective_Agreement_on_nonce:
-  "All A B x y #i #j. Send(A, B, x, y)@i & Recv(B, A, x, y)@j ==> #i < #j"
+lemma injectiveagreementINITIATOR:
+  "All a b x y #i.
+    Commit(a,b,<’I’,’R’,x,y>)@i &
+    not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+    ==> (Ex #j. Running(b,a,<’I’,’R’,x,y>)@j
+        & not (Ex a2 b2 #i2. Commit(a2,b2,<’I’,’R’,x,y>)@i2
+                           & not (#i2 = #i)))"
 
-lemma Nonce_Secrecy:
-  "All A B x y #i. St_A_2(A, _, B, _, _, x, y, _)@i ==> 
-    not (Ex #j. K(x, y)@j & not Honest(A, #j) & not Honest(B, #j))"
-
-lemma Freshness_of_nonce:
-  "All A B x y #i. Send(A, B, x, y)@i ==> 
-    New(x, y)@i"
+lemma injectiveagreementRESPONDER:
+  "All a b x y #i.
+    Commit(a,b,<’R’,’I’,x,y>)@i &
+    not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+    ==> (Ex #j. Running(b,a,<’R’,’I’,x,y>)@j
+        & not (Ex a2 b2 #i2. Commit(a2,b2,<’R’,’I’,x,y>)@i2
+                           & not (#i2 = #i)))"
 
 end
 

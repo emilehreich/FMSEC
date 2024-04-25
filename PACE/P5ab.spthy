@@ -4,21 +4,23 @@ lemma Executability:
     "Ex A B #i #j. 
        Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j)"
 
-lemma Mutual_Agreement_on_half_keys_and_key:
-  "All A B gx gy Kab #i #j. Send(A, B, gx, gy, Kab)@i & Recv(B, A, gx, gy, Kab)@j ==> #i < #j"
+lemma secrecy_PFS:
+  "All A B x #i.
+    Secret(A,B,x)@i &
+    not ((Ex #r. Reveal(A)@r & r < i) |
+         (Ex #r. Reveal(B)@r & r < i))
+    ==> not (Ex #j. K(x)@j)"
 
-lemma Session_Key_Secrecy:
-  "All A B Kab #i. St_A_2(A, _, B, _, Kab, _)@i ==> 
-    not (Ex #j. K(Kab)@j & not Honest(A, #j) & not Honest(B, #j))"
+lemma noninjectiveagreementINITIATOR:
+  "All a b t #i.
+    Commit(a,b,<’I’,’R’,t>)@i &
+    not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+    ==> (Ex #j. Running(b,a,<’I’,’R’,t>)@j)"
 
-lemma Freshness_of_half_keys_and_key:
-  "All A B gx gy Kab #i. Send(A, B, gx, gy, Kab)@i ==> 
-    New(gx, gy, Kab)@i"
-
-lemma Nonce_Secrecy:
-  "All A B s #i. St_A_1(A, _, B, _, s, _, _)@i ==> 
-    not (Ex #j. K(s)@j & not Honest(A, #j) & not Honest(B, #j))"
-
-lemma Perfect_Forward_Secrecy:
-  "All A B Kab #i. St_A_2(A, B, _, Kab, _)@i ==> 
-    not (Ex #j. K(Kab)@j & not Honest(A, #j) & not Honest(B, #j) & #j > #i)"
+lemma noninjectiveagreementRESPONDER:
+  "All a b t #i.
+    Commit(a,b,<’R’,’I’,t>)@i &
+    not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+    ==> (Ex #j. Running(b,a,<’R’,’I’,t>)@j)"
+  
+end
