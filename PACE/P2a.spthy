@@ -7,8 +7,8 @@ section{* 1.2 PACE - Mutual Authentication *}
   Protocol:
     1. A -> B: x
     2. B -> A: y
-    3. A -> B: [x, y]_k(B,A)
-    4. B -> A: [y, x]_k(A,B)
+    3. A -> B: [y]_k(A,B)
+    4. B -> A: [x]_k(B,A)
 
 */
 
@@ -49,106 +49,106 @@ rule Reveal_SKey_B:
 
 rule Init_A:
     [ Fr(~id)
-    , !SKey($A, $B, k1)
-    , !SKey($B, $A, k2)
+    , !SKey(A, B, k1)
+    , !SKey(B, A, k2)
     ]
-  --[ Create($A, ~id, 'Alice', k1, k2)
+  --[ Create(A, ~id, 'Alice', k1, k2)
     ]->
-    [ St_A_1($A, ~id, $B, k1, k2)
+    [ St_A_1(A, ~id, B, k1, k2)
     ]
 
 rule Init_B:
     [ Fr(~id)
-    , !SKey($A, $B, k1)
-    , !SKey($B, $A, k2)
+    , !SKey(A, B, k1)
+    , !SKey(B, A, k2)
     ]
-  --[ Create($B, ~id, 'Bob', k1, k2)
+  --[ Create(B, ~id, 'Bob', k1, k2)
     ]->
-    [ St_B_1($B, ~id, $A, k1, k2)
+    [ St_B_1(B, ~id, A, k1, k2)
     ]
 
 // Protocol Messages
 
 rule A_1_Send:
-    [ St_A_1($A, ~id, $B, k1, k2)
+    [ St_A_1(A, ~id, B, k1, k2)
     , Fr(~x)
     ]
-  --[ Send($A, ~x)
+  --[ Send(A, ~x)
     ]->
-    [ St_A_2($A, ~id, $B, k1, k2, ~x)
+    [ St_A_2(A, ~id, B, k1, k2, ~x)
     , Out(~x)
     ]
 
 rule B_1_Receive:
-    [ St_B_1($B, ~id, $A, k1, k2)
+    [ St_B_1(B, ~id, A, k1, k2)
     , In(~x)
     ]
-  --[ Recv($B, ~x)
-    , Running($B, $A, <'I', 'R', ~x>)
+  --[ Recv(B, ~x)
+    , Running(B, A, <'I', 'R', ~x>)
     ]->
-    [ St_B_2($B, ~id, $A, k1, k2, ~x)
+    [ St_B_2(B, ~id, A, k1, k2, ~x)
     ]
 
 rule B_2_Send:
-    [ St_B_2($B, ~id, $A, k1, k2, ~x)
+    [ St_B_2(B, ~id, A, k1, k2, ~x)
     , Fr(~y)
     ]
-  --[ Send($B, ~y)
+  --[ Send(B, ~y)
     ]->
-    [ St_B_3($B, ~id, $A, k1, k2, ~x, ~y)
+    [ St_B_3(B, ~id, A, k1, k2, ~x, ~y)
     , Out(~y)
     ]
 
 rule A_2_Receive:
-    [ St_A_2($A, ~id, $B, k1, k2, ~x)
+    [ St_A_2(A, ~id, B, k1, k2, ~x)
     , In(~y)
     ]
-  --[ Recv($A, ~y)
-    , Running($A, $B, <'R', 'I', ~y>)
+  --[ Recv(A, ~y)
+    , Running(A, B, <'R', 'I', ~y>)
     ]->
-    [ St_A_3($A, ~id, $B, k1, k2, ~x, ~y)
+    [ St_A_3(A, ~id, B, k1, k2, ~x, ~y)
     ]
 
 rule A_3_Send:
-    [ St_A_3($A, ~id, $B, k1, k2, ~x, ~y)
+    [ St_A_3(A, ~id, B, k1, k2, ~x, ~y)
     ]
-  --[ Send($A, mac(k1, ~y))
+  --[ Send(A, mac(k1, ~y))
     ]->
-    [ St_A_4($A, ~id, $B, k1, k2, ~x, ~y, mac(k1, ~y))
+    [ St_A_4(A, ~id, B, k1, k2, ~x, ~y, mac(k1, ~y))
     , Out(mac(k1, ~y))
     ]
 
 rule B_3_Receive:
-    [ St_B_3($B, ~id, $A, k1, k2, ~x, ~y)
+    [ St_B_3(B, ~id, A, k1, k2, ~x, ~y)
     , In(mac(k1, ~y))
     ]
-  --[ Recv($B, mac(k1, ~y))
+  --[ Recv(B, mac(k1, ~y))
     , Eq(vfy(k1, mac(k1, ~y), ~y), true)
-    , Authenticated($A, $B)
-    , Commit($B, $A, <'R', 'I', ~y>)
+    , Authenticated(A, B)
+    , Commit(B, A, <'R', 'I', ~y>)
     ]->
-    [ St_B_4($B, ~id, $A, k1, k2, ~x, ~y, mac(k1, ~y))
+    [ St_B_4(B, ~id, A, k1, k2, ~x, ~y, mac(k1, ~y))
     ]
 
 rule B_4_Send:
-    [ St_B_4($B, ~id, $A, k1, k2, ~x, ~y, mac(k1, ~y))
+    [ St_B_4(B, ~id, A, k1, k2, ~x, ~y, mac(k1, ~y))
     ]
-  --[ Send($B, mac(k2, ~x))
+  --[ Send(B, mac(k2, ~x))
     ]->
-    [ St_B_5($B, ~id, $A, k1, k2, ~x, ~y, mac(k1, ~y), mac(k2, ~x))
+    [ St_B_5(B, ~id, A, k1, k2, ~x, ~y, mac(k1, ~y), mac(k2, ~x))
     , Out(mac(k2, ~x))
     ]
 
 rule A_4_Receive:
-    [ St_A_4($A, ~id, $B, k1, k2, ~x, ~y, mac(k1, ~y))
+    [ St_A_4(A, ~id, B, k1, k2, ~x, ~y, mac(k1, ~y))
     , In(mac(k2, ~x))
     ]
-  --[ Recv($A, mac(k2, ~x))
+  --[ Recv(A, mac(k2, ~x))
       , Eq(vfy(k2, mac(k2, ~x), ~x), true)
-      , Authenticated($B, $A)
-      , Commit($A, $B, <'I', 'R', ~x>)
+      , Authenticated(B, A)
+      , Commit(A, B, <'I', 'R', ~x>)
     ]->
-    [ St_A_5($A, ~id, $B, k1, k2, ~x, ~y, mac(k1, ~y), mac(k2, ~x))
+    [ St_A_5(A, ~id, B, k1, k2, ~x, ~y, mac(k1, ~y), mac(k2, ~x))
     ]
 
 // restrictions
