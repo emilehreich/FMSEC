@@ -47,61 +47,61 @@ rule Reveal_SKey_B:
 
 rule Init_A:
     [ Fr(~id)
-    , !SKey($A, $B, k)]
-  --[ Create($A, ~id, 'Alice', k)
+    , !SKey(A, B, k)]
+  --[ Create(A, ~id, 'Alice', k)
     ]->
-    [ St_A_1($A, ~id, $B, k)
+    [ St_A_1(A, ~id, B, k)
     ]
 
 rule Init_B:
     [ Fr(~id)
-    , !SKey($A, $B, k)]
-  --[ Create($B, ~id, 'Bob', k)
+    , !SKey(A, B, k)]
+  --[ Create(B, ~id, 'Bob', k)
     ]->
-    [ St_B_1($B, ~id, $A, k)
+    [ St_B_1(B, ~id, A, k)
     ]
 
 // Protocol Messages
 
 rule A_1_Send:
-    [ St_A_1($A, ~id, $B, k)
+    [ St_A_1(A, ~id, B, k)
     , Fr(~x)
     ]
-  --[ Send($A, ~x)
+  --[ Send(A, ~x)
     ]->
-    [ St_A_2($A, ~id, $B, k, ~x)
+    [ St_A_2(A, ~id, B, k, ~x)
     , Out(~x)
     ]
 
 rule B_1_Receive:
-    [ St_B_1($B, ~id, $A, k)
+    [ St_B_1(B, ~id, A, k)
     , In(~x)
     ]
-  --[ Recv($B, ~x)
-    , Running($B, $A, <'I', 'R', ~x>)
+  --[ Recv(B, ~x)
+    , Running(B, A, <'I', 'R', ~x>)
     ]->
-    [ St_B_2($B, ~id, $A, k, ~x)
+    [ St_B_2(B, ~id, A, k, ~x)
     ]
 
 rule B_2_Send:
-    [ St_B_2($B, ~id, $A, k, ~x)
+    [ St_B_2(B, ~id, A, k, ~x)
     ]
-  --[ Send($B, mac(k, ~x))
+  --[ Send(B, mac(k, ~x))
     ]->
-    [ St_B_3($B, ~id, $A, k, ~x, mac(k, ~x))
+    [ St_B_3(B, ~id, A, k, ~x, mac(k, ~x))
     , Out(mac(k, ~x))
     ]
 
 rule A_2_Receive:
-    [ St_A_2($A, ~id, $B, k, ~x)
+    [ St_A_2(A, ~id, B, k, ~x)
     , In(mac(k, ~x))
     ]
-  --[ Recv($A, mac(k, ~x))
+  --[ Recv(A, mac(k, ~x))
       , Eq(vfy(k, mac(k, ~x), ~x), true)
-      , Authenticated($A, $B)
-      , Commit($A, $B, <'I', 'R', ~x>)
+      , Authenticated(A, B)
+      , Commit(A, B, <'I', 'R', ~x>)
     ]->
-    [ St_A_3($A, ~id, $B, k, ~x, mac(k, ~x))
+    [ St_A_3(A, ~id, B, k, ~x, mac(k, ~x))
     ]
 
 
