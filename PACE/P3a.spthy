@@ -18,103 +18,155 @@ functions:
 equations:
   vfy(k, mac(k, msg), msg) = true
 
-// Protocol Rules
-rule Init:
-    [ Fr(~id), Fr(~skAB), Fr(~skBA) ]
-  --[ Create($A, ~id, 'Alice', ~skAB, ~skBA)
-    , Create($B, ~id, 'Bob', ~skBA, ~skAB)
+// Key Infrastructure
+rule Shared_Key:
+  [ Fr(~sk)
+  ]
+--[ UniDKey($A, $B, ~sk)
+  ]->
+  [ !SKey($A, $B, ~sk)
+  ]
+
+rule Reveal_SKey_A:
+    [ !SKey(A, B, k) 
+    ]
+  --[ Reveal(A) 
     ]->
-    [ St_A_1($A, ~id, $B, ~skAB, ~skBA)
-    , St_B_1($B, ~id, $A, ~skAB, ~skBA)
+    [ Out(k) 
     ]
 
+rule Reveal_SKey_B:
+    [ !SKey(A, B, k) 
+    ]
+  --[ Reveal(B) 
+    ]->
+    [ Out(k) 
+    ]
+
+
+// -- Protocol Rules --
+// Thread Initialization
+
+rule Init_A:
+    [ Fr(~id)
+    , !SKey($A, $B, k1)
+    , !SKey($B, $A, k2)
+    ]
+  --[ Create($A, ~id, 'Alice', k1, k2)
+    ]->
+    [ St_A_1($A, ~id, $B, k1, k2)
+    ]
+
+rule Init_B:
+    [ Fr(~id)
+    , !SKey($A, $B, k1)
+    , !SKey($B, $A, k2)
+    ]
+  --[ Create($B, ~id, 'Bob', k1, k2)
+    ]->
+    [ St_B_1($B, ~id, $A, k1, k2)
+    ]
+
+// Protocol Messages
+
 rule A_1_Send:
-    [ St_A_1($A, ~id, $B, ~skAB, ~skBA)
+    [ St_A_1($A, ~id, $B, k1, k2)
     , Fr(~x)
     ]
   --[ Send($A, ~x)
     ]->
-    [ St_A_2($A, ~id, $B, ~skAB, ~skBA, ~x)
+    [ St_A_2($A, ~id, $B, k1, k2, ~x)
     , Out(~x)
     ]
 
 rule B_1_Receive:
-    [ St_B_1($B, ~id, $A, ~skAB, ~skBA)
+    [ St_B_1($B, ~id, $A, k1, k2)
     , In(~x)
     ]
   --[ Recv($B, ~x)
+    , Running($B, $A, <'I', 'R', ~x>)
     ]->
-    [ St_B_2($B, ~id, $A, ~skAB, ~skBA, ~x)
+    [ St_B_2($B, ~id, $A, k1, k2, ~x)
     ]
 
 rule B_2_Send:
-    [ St_B_2($B, ~id, $A, ~skAB, ~skBA, ~x)
+    [ St_B_2($B, ~id, $A, k1, k2, ~x)
     , Fr(~y)
     ]
   --[ Send($B, ~y)
     ]->
-    [ St_B_3($B, ~id, $A, ~skAB, ~skBA, ~x, ~y)
+    [ St_B_3($B, ~id, $A, k1, k2, ~x, ~y)
     , Out(~y)
     ]
 
 rule A_2_Receive:
-    [ St_A_2($A, ~id, $B, ~skAB, ~skBA, ~x)
+    [ St_A_2($A, ~id, $B, k1, k2, ~x)
     , In(~y)
     ]
   --[ Recv($A, ~y)
+    , Running($A, $B, <'R', 'I', ~y>)
     ]->
-    [ St_A_3($A, ~id, $B, ~skAB, ~skBA, ~x, ~y)
+    [ St_A_3($A, ~id, $B, k1, k2, ~x, ~y)
     ]
 
 rule A_3_Send:
     let 
-        kab = kdf(~skAB, ~x, ~y)
+      kab = kdf(k1, ~x, ~y)
     in
-    [ St_A_3($B, ~id, $A, ~skAB, ~skBA, ~x, ~y)
+    [ St_A_3($A, ~id, $B, k1, k2, ~x, ~y)
     ]
   --[ Send($A, mac(kab, ~y))
     ]->
-    [ St_A_4($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y))
+    [ St_A_4($A, ~id, $B, k1, k2, ~x, ~y, kab, mac(kab, ~y))
     , Out(mac(kab, ~y))
     ]
 
 rule B_3_Receive:
     let 
-        kab = kdf(~skAB, ~x, ~y)
+      kab = kdf(k1, ~x, ~y)
     in
-    [ St_B_3($A, ~id, $B, ~skAB, ~skBA, ~x, ~y)
+    [ St_B_3($B, ~id, $A, k1, k2, ~x, ~y)
     , In(mac(kab, ~y))
     ]
   --[ Recv($B, mac(kab, ~y))
     , Eq(vfy(kab, mac(kab, ~y), ~y), true)
     , Authenticated($A, $B)
+    , Commit($B, $A, <'R', 'I', ~y>)
     ]->
-    [ St_B_4($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y))
+    [ St_B_4($B, ~id, $A, k1, k2, ~x, ~y, kab, mac(kab, ~y))
     ]
 
 rule B_4_Send:
-    [ St_B_4($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y))
+    [ St_B_4($B, ~id, $A, k1, k2, ~x, ~y, kab, mac(kab, ~y))
     ]
   --[ Send($B, mac(kab, ~x))
     ]->
-    [ St_B_5($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y), mac(kab, ~x))
-    , Out(mac(kab, ~x))
+    [ St_B_5($B, ~id, $A, k1, k2, ~x, ~y, kab, mac(kab, ~y), mac(kab, ~x))
+    , Out(mac(k2, ~x))
     ]
 
 rule A_4_Receive:
-    [ St_A_4($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y))
+    [ St_A_4($A, ~id, $B, k1, k2, ~x, ~y, kab, mac(kab, ~y))
     , In(mac(kab, ~x))
     ]
   --[ Recv($A, mac(kab, ~x))
       , Eq(vfy(kab, mac(kab, ~x), ~x), true)
       , Authenticated($B, $A)
+      , Commit($A, $B, <'I', 'R', ~x>)
     ]->
-    [ St_A_5($A, ~id, $B, ~skAB, ~skBA, ~x, ~y, kab, mac(kab, ~y), mac(kab, ~x))
+    [ St_A_5($A, ~id, $B, k1, k2, ~x, ~y, kab, mac(kab, ~y), mac(kab, ~x))
     ]
 
 // restrictions
 restriction Equality:
 	"All x y #i. Eq(x,y) @i ==> x = y"
+
+restriction KeyUnidirection:
+  "All A B k1 k2 #i. 
+    UniDKey(A, B, k1)@i &
+    UniDKey(B, A, k2)@i &
+    not (A = B) ==> not (k1 = k2)"
+    
 
 // Security Properties
 lemma Executability:
@@ -122,7 +174,22 @@ lemma Executability:
     "Ex A B #i #j. 
        Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j)"
 
-// TODO - add more properties
+lemma injectiveagreementINITIATOR:
+  "All a b t #i.
+      Commit(a,b,<'I','R',t>)@i &
+      not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+      ==> (Ex #j. Running(b,a,<'I','R',t>)@j
+          & not (Ex a2 b2 #i2. Commit(a2,b2,<'I','R',t>)@i2
+          & not (#i2 = #i)))"
+
+lemma injectiveagreementRESPONDER:
+  "All a b t #i.
+      Commit(a,b,<'R','I',t>)@i &
+      not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+      ==> (Ex #j. Running(b,a,<'R','I',t>)@j
+          & not (Ex a2 b2 #i2. Commit(a2,b2,<'R','I',t>)@i2
+          & not (#i2 = #i)))"
+
 
 end
 
