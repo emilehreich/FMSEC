@@ -132,6 +132,7 @@ rule B_3_Receive:
     , Eq(vfy(kab, mac(kab, ~y), ~y), true)
     , Authenticated($A, $B)
     , Commit($B, $A, <'R', 'I', ~y>)
+    , Secret($B, kab)
     ]->
     [ St_B_4($B, ~id, $A, k1, k2, ~x, ~y, kab, mac(kab, ~y))
     ]
@@ -153,6 +154,7 @@ rule A_4_Receive:
       , Eq(vfy(kab, mac(kab, ~x), ~x), true)
       , Authenticated($B, $A)
       , Commit($A, $B, <'I', 'R', ~x>)
+      , Secret($A, kab)
     ]->
     [ St_A_5($A, ~id, $B, k1, k2, ~x, ~y, kab, mac(kab, ~y), mac(kab, ~x))
     ]
@@ -189,6 +191,12 @@ lemma injectiveagreementRESPONDER:
       ==> (Ex #j. Running(b,a,<'R','I',t>)@j
           & not (Ex a2 b2 #i2. Commit(a2,b2,<'R','I',t>)@i2
           & not (#i2 = #i)))"
+
+lemma secrecy:
+  "All A B x #i.
+      Secret(A,B,x)@i &
+      not ((Ex #r. Reveal(A)@r) | (Ex #r. Reveal(B)@r))
+      ==> not (Ex #j. K(x)@j)"
 
 
 end
