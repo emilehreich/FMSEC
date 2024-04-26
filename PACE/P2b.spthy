@@ -123,7 +123,7 @@ rule B_3_Receive:
     , In(mac(k1, <'A', 'B', y, x>))
     ]
   --[ Recv(B, mac(k1, <'A', 'B', y, x>))
-    , Eq(vfy(k1, mac(k1, <'A', 'B', y, x>), <y, x>), true)
+    , Eq(vfy(k1, mac(k1, <'A', 'B', y, x>), <'A', 'B', y, x>), true)
     , Authenticated(A, B)
     , Commit(B, A, <'R', 'I', x, y>)
     ]->
@@ -144,7 +144,7 @@ rule A_4_Receive:
     , In(mac(k2, <'B', 'A', x, y>))
     ]
   --[ Recv(A, mac(k2, <'B', 'A', x, y>))
-      , Eq(vfy(k2, mac(k2, <'B', 'A', x, y>), <x, y>), true)
+      , Eq(vfy(k2, mac(k2, <'B', 'A', x, y>), <'B', 'A', x, y>), true)
       , Authenticated(B, A)
       , Commit(A, B, <'I', 'R', x, y>)
     ]->
