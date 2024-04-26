@@ -64,44 +64,44 @@ rule Init_B:
 // Protocol Messages
 
 rule A_1_Send:
-    [ St_A_1(A, ~id, B, k)
+    [ St_A_1(A, id, B, k)
     , Fr(~x)
     ]
   --[ Send(A, ~x)
     ]->
-    [ St_A_2(A, ~id, B, k, ~x)
+    [ St_A_2(A, id, B, k, ~x)
     , Out(~x)
     ]
 
 rule B_1_Receive:
-    [ St_B_1(B, ~id, A, k)
-    , In(~x)
+    [ St_B_1(B, id, A, k)
+    , In(x)
     ]
-  --[ Recv(B, ~x)
-    , Running(B, A, <'I', 'R', ~x>)
+  --[ Recv(B, x)
+    , Running(B, A, <'I', 'R', x>)
     ]->
-    [ St_B_2(B, ~id, A, k, ~x)
+    [ St_B_2(B, id, A, k, x)
     ]
 
 rule B_2_Send:
-    [ St_B_2(B, ~id, A, k, ~x)
+    [ St_B_2(B, id, A, k, x)
     ]
-  --[ Send(B, mac(k, ~x))
+  --[ Send(B, mac(k, x))
     ]->
-    [ St_B_3(B, ~id, A, k, ~x, mac(k, ~x))
-    , Out(mac(k, ~x))
+    [ St_B_3(B, id, A, k, x, mac(k, x))
+    , Out(mac(k, x))
     ]
 
 rule A_2_Receive:
-    [ St_A_2(A, ~id, B, k, ~x)
-    , In(mac(k, ~x))
+    [ St_A_2(A, id, B, k, x)
+    , In(mac(k, x))
     ]
-  --[ Recv(A, mac(k, ~x))
-      , Eq(vfy(k, mac(k, ~x), ~x), true)
+  --[ Recv(A, mac(k, x))
+      , Eq(vfy(k, mac(k, x), x), true)
       , Authenticated(A, B)
-      , Commit(A, B, <'I', 'R', ~x>)
+      , Commit(A, B, <'I', 'R', x>)
     ]->
-    [ St_A_3(A, ~id, B, k, ~x, mac(k, ~x))
+    [ St_A_3(A, id, B, k, x, mac(k, x))
     ]
 
 
@@ -128,6 +128,7 @@ lemma injectiveagreementINITIATOR:
       ==> (Ex #j. Running(b,a,<'I','R',t>)@j
           & not (Ex a2 b2 #i2. Commit(a2,b2,<'I','R',t>)@i2
           & not (#i2 = #i)))"
+
 
 end
 
