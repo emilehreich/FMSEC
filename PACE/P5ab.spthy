@@ -230,6 +230,13 @@ lemma secrecy:
       Secret(A,B,x)@i &
       not ((Ex #r. Reveal(A)@r) | (Ex #r. Reveal(B)@r))
       ==> not (Ex #j. K(x)@j)"
+
+lemma secrecy_PFS:
+  "All A B x #i.
+      Secret(A,B,x)@i &
+      not ((Ex #r. Reveal(A)@r & r < i) |
+      (Ex #r. Reveal(B)@r & r < i))
+      ==> not (Ex #j. K(x)@j)"
         
 
 end
