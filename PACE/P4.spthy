@@ -148,7 +148,7 @@ rule B_4_Send:
 
 rule A_4_Receive:
     [ St_A_4(A, id, B, k1, k2, x, s, h(k1), senc(s, h(k1)), y, kab, mac(kab, <'A', 'B', y>))
-    , In(mac(kab, <'B', 'A', x, y>))
+    , In(mac(kab, <'B', 'A', x>))
     ]
   --[ Recv(A, mac(kab, <'B', 'A', x>))
       , Eq(vfy(k2, mac(kab, <'B', 'A', x>), <'A', 'B', x>), true)
