@@ -1,0 +1,46 @@
+theory OTR1
+begin
+
+section{* 1.1 OTR - Authenticated Key-Exchange *}
+
+/*
+  Protocol:
+    1. A -> B: A, {Na, A}_(pub(B))
+    2. B -> A: B, {Nb, Na, B, sign(priv(B), Nb ++ Na)}_(pub(A))
+    3. A -> B: {Nb, sign(priv(A), Nb)}_(pub(B))
+*/
+
+functions:
+  pub/1, priv/1, enc/2, dec/2, sign/2, verify/3, hash/1, kdf/2, nonce/1
+
+equations:
+  verify(pub(k), sign(priv(k), msg), msg) = true
+  dec(priv(k), enc(pub(k), msg)) = msg
+
+rule Initiate_Exchange:
+  [ Fr(~na), !Pk(A, pub(a)), !Pk(B, pub(b)) ]
+  --[ SendInit(A, B) ]->
+  [ St(A, B, ~na), Out(enc(pub(b), ~na ++ A)) ]
+
+rule Respond_to_Exchange:
+  [ St(A, B, na), !Sk(B, priv(b)), !Pk(A, pub(a)), Fr(~nb) ]
+  --[ SendResp(B, A) ]->
+  [ St(B, A, ~nb), Out(enc(pub(a), ~nb ++ na ++ B ++ sign(priv(b), ~nb ++ na))) ]
+
+rule Complete_Exchange:
+  [ St(B, A, nb), !Sk(A, priv(a)), !Pk(B, pub(b)) ]
+  --[ SendComp(A, B) ]->
+  [ Out(enc(pub(b), nb ++ sign(priv(a), nb))) ]
+
+rule Reveal_Session_Key:
+  [ St(A, B, sk) ]
+  --[ RevealKey(A, B) ]->
+  [ Out(sk) ]
+
+// restrictions
+TODO
+
+// Security Properties
+TODO
+
+end
