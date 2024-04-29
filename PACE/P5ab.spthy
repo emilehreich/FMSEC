@@ -105,6 +105,7 @@ rule B_2_Send:
     ]
   --[ Send(B, g^~y)
     , Running(B, A, <'I', 'R', gA, g^~y>)
+    , Ineq(gA^~y, gA)
     ]->
     [ St_B_3(B, id, A, k1, k2, gA , $P, s, ~y, kab)
     , Out(g^~y)
@@ -120,6 +121,7 @@ rule A_2_Receive:
     ]
   --[ Recv(A, gB)
     , Running(A, B, <'R', 'I', g^x, gB>)
+    , Ineq(gB^x, gB)
     ]->
     [ St_A_3(A, id, B, k1, k2, $P, x, s, gB, kab)
     ]
@@ -184,6 +186,9 @@ rule A_4_Receive:
 // restrictions
 restriction Equality:
 	"All x y #i. Eq(x,y) @i ==> x = y"
+
+restriction Inequality:
+  "All x y #i. Ineq(x,y) @i ==> not (x = y)"
 
 restriction KeyUnidirection:
   "All A B k1 k2 #i. 
