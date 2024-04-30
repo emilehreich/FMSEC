@@ -1,0 +1,246 @@
+theory P5d
+begin
+
+section{* 1.5 PACE - Introducing Diffie-Hellman: The PACE protocol - unifiable *}
+
+/*
+  Protocol:
+
+
+*/
+
+builtins:
+  symmetric-encryption, hashing, diffie-hellman
+
+functions:
+  mac/2, vfy/3, true/0, map/2
+
+equations:
+  vfy(k, mac(k, msg1), msg1) = true
+
+// Key Infrastructure
+rule Shared_Key:
+  [ Fr(~sk)
+  ]
+--[ UniDKey($A, $B, ~sk)
+  ]->
+  [ !SKey($A, $B, ~sk)
+  ]
+
+rule Reveal_SKey_A:
+    [ !SKey(A, B, k) 
+    ]
+  --[ Reveal(A) 
+    ]->
+    [ Out(k) 
+    ]
+
+rule Reveal_SKey_B:
+    [ !SKey(A, B, k) 
+    ]
+  --[ Reveal(B) 
+    ]->
+    [ Out(k) 
+    ]
+
+
+// -- Protocol Rules --
+// Thread Initialization
+
+rule Init_A:
+    [ Fr(~id)
+    , !SKey(A, B, k1)
+    , !SKey(B, A, k2)
+    ]
+  --[ Create(A, ~id, 'Alice', k1, k2)
+    ]->
+    [ St_A_1(A, ~id, B, k1, k2)
+    ]
+
+rule Init_B:
+    [ Fr(~id)
+    , !SKey(A, B, k1)
+    , !SKey(B, A, k2)
+    ]
+  --[ Create(B, ~id, 'Bob', k1, k2)
+    ]->
+    [ St_B_1(B, ~id, A, k1, k2)
+    ]
+
+// Protocol Messages
+
+rule A_1_Send:
+    let
+      g = map(~s, $P)
+    in
+    [ St_A_1(A, id, B, k1, k2)
+    , Fr(~x)
+    , Fr(~s) // high entropy nonce (s) to include in the first message
+    ]
+  -->
+    [ St_A_2(A, id, B, k1, k2, $P, ~x, ~s)
+    , Out(<g^~x, senc(~s, h(k1)), $P>)
+    ]
+
+rule B_1_Receive:
+    let
+      g = map(s, $P)
+    in
+    [ St_B_1(B, id, A, k1, k2)
+    , In(<gA, senc(s, h(k1)), $P>)
+    ]
+  -->
+    [ St_B_2(B, id, A, k1, k2, gA , $P, s)
+    ]
+
+rule B_2_Send:
+    let
+      g = map(s, $P)
+      kab = h(gA^~y)
+    in
+    [ St_B_2(B, id, A, k1, k2, gA , $P, s)
+    , Fr(~y)
+    ]
+  --[ Running(B, A, <'I', 'R', gA, g^~y>)
+    , Ineq(gA^~y, gA)
+    ]->
+    [ St_B_3(B, id, A, k1, k2, gA , $P, s, ~y, kab)
+    , Out(g^~y)
+    ]
+
+rule A_2_Receive:
+    let 
+      g = map(s, $P)
+      kab = h(gB^x)
+    in
+    [ St_A_2(A, id, B, k1, k2, $P, x, s)
+    , In(gB)
+    ]
+  --[ Running(A, B, <'R', 'I', g^x, gB>)
+    , Ineq(gB^x, gB)
+    ]->
+    [ St_A_3(A, id, B, k1, k2, $P, x, s, gB, kab)
+    ]
+
+rule A_3_Send:
+    let
+      g = map(s, $P)
+    in
+    [ St_A_3(A, id, B, k1, k2, $P, x, s, gB, kab)
+    ]
+  -->
+    [ St_A_4(A, id, B, k1, k2, $P, x, s, gB, kab)
+    , Out(mac(kab, <'A', 'B', gB>))
+    ]
+
+rule B_3_Receive:
+    let
+      g = map(s, $P)
+      
+    in
+    [ St_B_3(B, id, A, k1, k2, gA , $P, s, y, kab)
+    , In(mac(kab, <'A', 'B', g^y>))
+    ]
+  --[ Eq(vfy(kab, mac(kab, <'A', 'B', g^y>), <'A', 'B', g^y>), true)
+    , Commit(B, A, <'R', 'I', gA, g^y>)
+    , Secret(A, B, kab)
+    ]->
+    [ St_B_4(B, id, A, k1, k2, gA , $P, s, y, kab)
+    ]
+
+rule B_4_Send:
+    let
+      g = map(s, $P)
+    in
+    [ St_B_4(B, id, A, k1, k2, gA , $P, s, y, kab)
+    ]
+  -->
+    [ St_B_5(B, id, A, k1, k2, $P, y, gA, s, kab)
+    , Out(mac(kab, <'B', 'A', gA>))
+    ]
+
+rule A_4_Receive:
+    let
+      g = map(s, $P)
+    in
+    [ St_A_4(A, id, B, k1, k2, $P, x, s, gB, kab)
+    , In(mac(kab, <'B', 'A', g^x>))
+    ]
+  --[ Eq(vfy(kab, mac(kab, <'B', 'A', g^x>), <'B', 'A', g^x>), true)
+      , Commit(A, B, <'I', 'R', g^x, gB>)
+      , Secret(A, B, kab)
+    ]->
+    [ St_A_5(A, id, B, k1, k2, $P, x, s, gB, kab)
+    ]
+
+// restrictions
+restriction Equality:
+	"All x y #i. Eq(x,y) @i ==> x = y"
+
+restriction Inequality:
+  "All x y #i. Ineq(x,y) @i ==> not (x = y)"
+
+restriction KeyUnidirection:
+  "All A B k1 k2 #i. 
+    UniDKey(A, B, k1)@i &
+    UniDKey(B, A, k2)@i &
+    not (A = B) ==> not (k1 = k2)"
+
+restriction UnidirectionalKeys:
+    "All a b c k1 k2 #i.
+      Create(a, b, c, k1, k2) @i
+      & k1 = k2
+        ==> F"
+    
+
+// Security Properties
+// lemma Executability:
+//   exists-trace
+//     "Ex A B #i #j. 
+//        Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j)"
+
+lemma injectiveagreementINITIATOR:
+  "All a b t #i.
+      Commit(a,b,<'I','R',t>)@i &
+      not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+      ==> (Ex #j. Running(b,a,<'I','R',t>)@j
+          & not (Ex a2 b2 #i2. Commit(a2,b2,<'I','R',t>)@i2
+          & not (#i2 = #i)))"
+
+lemma injectiveagreementRESPONDER:
+  "All a b t #i.
+      Commit(a,b,<'R','I',t>)@i &
+      not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+      ==> (Ex #j. Running(b,a,<'R','I',t>)@j
+          & not (Ex a2 b2 #i2. Commit(a2,b2,<'R','I',t>)@i2
+          & not (#i2 = #i)))"
+
+lemma secrecy:
+  "All A B x #i.
+      Secret(A,B,x)@i &
+      not ((Ex #r. Reveal(A)@r) | (Ex #r. Reveal(B)@r))
+      ==> not (Ex #j. K(x)@j)"
+
+lemma secrecy_PFS:
+  "All A B x #i.
+      Secret(A,B,x)@i &
+      not ((Ex #r. Reveal(A)@r & r < i) |
+      (Ex #r. Reveal(B)@r & r < i))
+      ==> not (Ex #j. K(x)@j)"
+
+
+lemma noninjectiveagreementINITIATOR:
+    "All a b t #i.
+        Commit(a,b,<'I','R',t>)@i &
+        not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+        ==> (Ex #j. Running(b,a,<'I','R',t>)@j)"
+
+lemma noninjectiveagreementRESPONDER:
+    "All a b t #i.
+        Commit(a,b,<'R','I',t>)@i &
+        not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+        ==> (Ex #j. Running(b,a,<'R','I',t>)@j)"
+
+
+end
+
