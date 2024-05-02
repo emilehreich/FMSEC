@@ -1,0 +1,111 @@
+theory OTR3
+begin
+
+section{* 2.3 OTR - Improvement *}
+
+/*
+    Protocol
+        A → B : Sign_skA (g^x), pkA
+        B → A : Sign_skB (g^y), pkB
+        
+*/
+
+builtins: 
+    signing, diffie-hellman
+
+
+// Public Key Infrastructure
+
+rule Register_Keys:
+    [Fr(~ltk)]-->[!Ltk($A, ~ltk), !Pk($A, pk(~ltk)), Out(pk(~ltk))]
+
+rule Reveal_ltk:
+    [ !Ltk(A, ltk)
+    ]
+  --[ Reveal(A)
+    ]->
+    [ Out(ltk)
+    ]
+
+// -- Protocol Rules -- 
+// Thread Initialization
+
+rule Init_A:
+    [ Fr(~id)
+    , !Ltk(A, ltkA)
+    , !Pk(B, pkB)
+    ]
+  --[ Create(A, ~id, 'Alice')
+    ]->
+    [ St_A_1(A, ~id, ltkA, B, pkB)
+    ]
+
+rule Init_B:
+    [ Fr(~id)
+    , !Ltk(B, ltkB)
+    , !Pk(A, pkA)
+    ]
+  --[ Create(B, ~id, 'Bob')
+    ]->
+    [ St_B_1(B, ~id, ltkB, A, pkA)
+    ]
+
+rule A_1_Send:
+    [ St_A_1(A, id, ltkA, B, pkB)
+    , Fr(~x)
+    ]
+  --[ Send(A, B, <'g'^~x, sign('g'^~x, ltkA), pk(ltkA)>)
+    ]->
+    [ St_A_2(A, id, ltkA, B, pkB, ~x)
+    , Out(<'g'^~x, sign('g'^~x, ltkA), pk(ltkA)>)
+    ]
+
+rule B_1_Receive:
+    [ St_B_1(B, id, ltkB, A, pkA)
+    , In(<gx, s, pkA>)
+    ]
+  --[ Receive(B, A, <gx, s, pkA>)
+    , Eq(verify(s, gx, pkA), true)
+    ]->
+    [ St_B_2(B, id, ltkB, A, pkA, gx)
+    ]
+
+rule B_2_Send:
+    [ St_B_2(B, id, ltkB, A, pkA, gx)
+    , Fr(~y)
+    ]
+  --[ Send(B, A, <'g'^~y, sign('g'^~y, ltkB), pk(ltkB)>)
+    ]->
+    [ St_B_3(B, id, ltkB, A, pkA, ~y)
+    , Out(<'g'^~y, sign('g'^~y, ltkB), pk(ltkB)>)
+    ]
+
+rule A_2_Receive:
+    [ St_A_2(A, id, ltkA, B, pkB, x)
+    , In(<gy, s, pkB>)
+    ]
+  --[ Receive(A, B, <gy, s, pkB>)
+    , Eq(verify(s, gy, pkB), true)
+    , Authenticated(A, B)
+    ]->
+    [ St_A_3(A, id, ltkA, B, pkB, x, gy)
+    ]
+
+
+// restrictions
+restriction Equality:
+	"All x y #i. Eq(x,y) @i ==> x = y"
+
+// Security Properties
+lemma Executability:
+  exists-trace
+    "Ex a b #i. Authenticated(a, b) @i & not (a = b)
+    & (All C D id1 id2 #j #k. Create(C, id1, 'Alice') @j & Create(D, id2, 'Alice') @k ==> id1 = id2)
+    & (All E F id3 id4 #l #m. Create(E, id3, 'Bob') @l & Create(F, id4, 'Bob') @m ==> id3 = id4)
+    & not(Ex X #n. Reveal(X) @n)
+    "
+
+
+// add lemma for authentication
+
+end
