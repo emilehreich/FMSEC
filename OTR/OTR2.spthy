@@ -5,8 +5,8 @@ section{* 2.2 OTR - Authentication Failure *}
 
 /*
     Protocol
-        A → B : SignskA (g^x), pkA
-        B → A : SignskB (g^y), pkB
+        A → B : Sign_skA (g^x, A), pkA
+        B → A : Sign_skB (g^y, B), pkB
         
 */
 
@@ -54,10 +54,10 @@ rule A_1_Send:
     [ St_A_1(A, id, ltkA, B, pkB)
     , Fr(~x)
     ]
-  --[ Send(A, B, <'g'^~x, sign('g'^~x, ltkA), pk(ltkA)>)
+  --[ Send(A, B, <'g'^~x, sign(<'g'^~x, A>, ltkA), pk(ltkA)>)
     ]->
     [ St_A_2(A, id, ltkA, B, pkB, ~x)
-    , Out(<'g'^~x, sign('g'^~x, ltkA), pk(ltkA)>)
+    , Out(<'g'^~x, sign(<'g'^~x, A>, ltkA), pk(ltkA)>)
     ]
 
 rule B_1_Receive:
@@ -65,7 +65,7 @@ rule B_1_Receive:
     , In(<gx, s, pkA>)
     ]
   --[ Receive(B, A, <gx, s, pkA>)
-    , Eq(verify(s, gx, pkA), true)
+    , Eq(verify(s, <gx, A>, pkA), true)
     ]->
     [ St_B_2(B, id, ltkB, A, pkA, gx)
     ]
@@ -74,10 +74,10 @@ rule B_2_Send:
     [ St_B_2(B, id, ltkB, A, pkA, gx)
     , Fr(~y)
     ]
-  --[ Send(B, A, <'g'^~y, sign('g'^~y, ltkB), pk(ltkB)>)
+  --[ Send(B, A, <'g'^~y, sign(<'g'^~y, B>, ltkB), pk(ltkB)>)
     ]->
     [ St_B_3(B, id, ltkB, A, pkA, ~y)
-    , Out(<'g'^~y, sign('g'^~y, ltkB), pk(ltkB)>)
+    , Out(<'g'^~y, sign(<'g'^~y, B>, ltkB), pk(ltkB)>)
     ]
 
 rule A_2_Receive:
@@ -85,7 +85,7 @@ rule A_2_Receive:
     , In(<gy, s, pkB>)
     ]
   --[ Receive(A, B, <gy, s, pkB>)
-    , Eq(verify(s, gy, pkB), true)
+    , Eq(verify(s, <gy, B>, pkB), true)
     , Authenticated(A, B)
     ]->
     [ St_A_3(A, id, ltkA, B, pkB, x, gy)
@@ -97,7 +97,7 @@ restriction Equality:
 	"All x y #i. Eq(x,y) @i ==> x = y"
 
 // Security Properties
-lemma executable:
+lemma Executability:
   exists-trace
     "Ex a b #i. Authenticated(a, b) @i & not (a = b)
     & (All C D id1 id2 #j #k. Create(C, id1, 'Alice') @j & Create(D, id2, 'Alice') @k ==> id1 = id2)

@@ -5,8 +5,8 @@ section{* 2.1 OTR - Modeling the original OTR Key Exchange *}
 
 /*
     Protocol
-        A → B : SignskA (g^x), pkA
-        B → A : SignskB (g^y), pkB
+        A → B : Sign_skA (g^x), pkA
+        B → A : Sign_skB (g^y), pkB
         
 */
 
@@ -97,7 +97,7 @@ restriction Equality:
 	"All x y #i. Eq(x,y) @i ==> x = y"
 
 // Security Properties
-lemma executable:
+lemma Executability:
   exists-trace
     "Ex a b #i. Authenticated(a, b) @i & not (a = b)
     & (All C D id1 id2 #j #k. Create(C, id1, 'Alice') @j & Create(D, id2, 'Alice') @k ==> id1 = id2)
