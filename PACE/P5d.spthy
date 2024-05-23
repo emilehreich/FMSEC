@@ -118,6 +118,7 @@ rule A_2_Receive:
     ]
   --[ Running(A, B, <'R', 'I', g^x, gB>)
     , Ineq(gB^x, gB)
+    , Ineq(g^x, gB)
     ]->
     [ St_A_3(A, id, B, k1, k2, $P, x, s, gB, kab)
     ]
@@ -142,6 +143,7 @@ rule B_3_Receive:
     , In(mac(kab, <g^y>))
     ]
   --[ Eq(vfy(kab, mac(kab, <g^y>), <g^y>), true)
+    , Authenticated(A, B)
     , Commit(B, A, <'R', 'I', gA, g^y>)
     , Secret(A, B, kab)
     ]->
@@ -167,8 +169,9 @@ rule A_4_Receive:
     , In(mac(kab, <g^x>))
     ]
   --[ Eq(vfy(kab, mac(kab, <g^x>), <g^x>), true)
-      , Commit(A, B, <'I', 'R', g^x, gB>)
-      , Secret(A, B, kab)
+    , Authenticated(B, A)
+    , Commit(A, B, <'I', 'R', g^x, gB>)
+    , Secret(A, B, kab)
     ]->
     [ St_A_5(A, id, B, k1, k2, $P, x, s, gB, kab)
     ]
@@ -194,10 +197,10 @@ restriction UnidirectionalKeys:
     
 
 // Security Properties
-// lemma Executability:
-//   exists-trace
-//     "Ex A B #i #j. 
-//        Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j)"
+lemma Executability:
+  exists-trace
+    "Ex A B #i #j. 
+       Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j)"
 
 lemma injectiveagreementINITIATOR:
   "All a b t #i.
