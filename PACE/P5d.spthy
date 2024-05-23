@@ -130,7 +130,7 @@ rule A_3_Send:
     ]
   -->
     [ St_A_4(A, id, B, k1, k2, $P, x, s, gB, kab)
-    , Out(mac(kab, <'A', 'B', gB>))
+    , Out(mac(kab, <gB>))
     ]
 
 rule B_3_Receive:
@@ -139,9 +139,9 @@ rule B_3_Receive:
       
     in
     [ St_B_3(B, id, A, k1, k2, gA , $P, s, y, kab)
-    , In(mac(kab, <'A', 'B', g^y>))
+    , In(mac(kab, <g^y>))
     ]
-  --[ Eq(vfy(kab, mac(kab, <'A', 'B', g^y>), <'A', 'B', g^y>), true)
+  --[ Eq(vfy(kab, mac(kab, <g^y>), <g^y>), true)
     , Commit(B, A, <'R', 'I', gA, g^y>)
     , Secret(A, B, kab)
     ]->
@@ -156,7 +156,7 @@ rule B_4_Send:
     ]
   -->
     [ St_B_5(B, id, A, k1, k2, $P, y, gA, s, kab)
-    , Out(mac(kab, <'B', 'A', gA>))
+    , Out(mac(kab, <gA>))
     ]
 
 rule A_4_Receive:
@@ -164,9 +164,9 @@ rule A_4_Receive:
       g = map(s, $P)
     in
     [ St_A_4(A, id, B, k1, k2, $P, x, s, gB, kab)
-    , In(mac(kab, <'B', 'A', g^x>))
+    , In(mac(kab, <g^x>))
     ]
-  --[ Eq(vfy(kab, mac(kab, <'B', 'A', g^x>), <'B', 'A', g^x>), true)
+  --[ Eq(vfy(kab, mac(kab, <g^x>), <g^x>), true)
       , Commit(A, B, <'I', 'R', g^x, gB>)
       , Secret(A, B, kab)
     ]->
@@ -243,4 +243,3 @@ lemma noninjectiveagreementRESPONDER:
 
 
 end
-
