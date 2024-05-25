@@ -1,0 +1,219 @@
+theory OTR4
+begin
+
+section{* 2.4 OTR - SIGMA *}
+
+/*
+    Protocol
+        A → B : g^x
+        B → A : g^y
+        A → B : 'A', Sign_skA (g^y , g^x), MAC_Km (′0′,′ A′), vk_A
+        B → A : 'B', Sign_skB (g^x , g^y), MAC_Km (′1′,′ B′), vk_B
+        
+*/
+
+builtins: 
+    signing, diffie-hellman, hashing
+
+functions:
+    mac/2, vfy/3, true/0
+  
+equations:
+    vfy(k, mac(k, msg), msg) = true
+
+rule Register_Keys:
+    [Fr(~ltk)]-->[!Ltk($A, ~ltk), !Pk($A, pk(~ltk)), Out(pk(~ltk))]
+
+rule Reveal_ltk:
+    [ !Ltk(A, ltk)
+    ]
+  --[ Reveal(A)
+    ]->
+    [ Out(ltk)
+    ]
+
+// -- Protocol Rules --
+
+// Threads Intialization
+rule Init_A:
+    [ Fr(~id)
+    , !Ltk(A, ltkA)
+    , !Pk(B, pkB)
+    ]
+  --[ Create(A, ~id, 'Alice')
+    ]->
+    [ St_A_1(A, ~id, ltkA, B, pkB)
+    ]
+
+rule Init_B:
+    [ Fr(~id)
+    , !Ltk(B, ltkB)
+    , !Pk(A, pkA)
+    ]
+  --[ Create(B, ~id, 'Bob')
+    ]->
+    [ St_B_1(B, ~id, ltkB, A, pkA)
+    ]
+
+// --
+rule A_1_Send:
+    [ St_A_1(A, id, ltkA, B, pkB)
+    , Fr(~x)
+    ]
+  --[ Send(A, B, 'g'^~x)
+    ]->
+    [ St_A_2(A, id, ltkA, B, pkB, ~x)
+    , Out('g'^~x)
+    ]
+
+rule B_1_Receive:
+    [ St_B_1(B, id, ltkB, A, pkA)
+    , In(gx)
+    ]
+  --[ Receive(B, A, gx)
+    ]->
+    [ St_B_2(B, id, ltkB, A, pkA, gx)
+    ]
+
+rule B_2_Send:
+    [ St_B_2(B, id, ltkB, A, pkA, gx)
+    , Fr(~y)
+    ]
+  --[ Send(B, A, 'g'^~y)
+    ]->
+    [ St_B_3(B, id, ltkB, A, pkA, gx, ~y)
+    , Out('g'^~y)
+    ]
+
+rule A_2_Receive:
+    [ St_A_2(A, id, ltkA, B, pkB, x)
+    , In(gy)
+    ]
+  --[ Receive(A, B, gy)
+    ]->
+    [ St_A_3(A, id, ltkA, B, pkB, x, gy)
+    ]
+
+rule A_3_Send:
+    let
+        s = sign(<gy, 'g'^x>, ltkA)
+        km = h(gy^x)
+        tag = mac(<'0', 'A'>, km)
+        vkA = pk(ltkA)
+        message = <'A', s, tag, vkA>
+    in
+    [ St_A_3(A, id, ltkA, B, pkB, x, gy)
+    ]
+  --[ Send(A, B, message)
+    , Running(A, B, <'R', 'I', km>)
+    ]->
+    [ St_A_4(A, id, ltkA, B, pkB, x, gy, s, km, tag, vkA)
+    , Out(message)
+    ]
+
+rule B_3_Receive:
+    let
+        km = h(gx^y)
+        tag = mac(<'0', A>, km)
+        message = <'A', s, tag, vkA>
+    in
+    [St_B_3(B, id, ltkB, A, pkA, gx, y)
+    , In(message)
+    ]
+  --[ Receive(B, A, message)
+    , Eq(verify(s, <'g'^y, gx>, pkA), true)
+    , Running(B, A, <'I', 'R', km>)
+    ]->
+    [St_B_4(B, id, ltkB, A, pkA, gx, y)
+    ]
+
+
+rule B_4_Send:
+    let
+        s = sign(<gx, 'g'^y>, ltkB)
+        km = h(gx^y)
+        tag = mac(<'1', 'B'>, km)
+        vkB = pk(ltkB)
+        message = <'B', s, tag, vkB>
+    in
+    [St_B_4(B, id, ltkB, A, pkA, gx, y)
+    ]
+  --[ Send(B, A, message)
+    , Commit(B, A, <'R', 'I', km>)
+    , Secret(B, A, km)
+    ]->
+    [St_B_5(B, id, ltkB, A, pkA, gx, y, s, km, tag, vkB)
+    , Out(message)
+    ]
+
+rule A_4_Receive:
+    let
+        km = h(gy^y)
+        tag = mac(<'1', 'B'>, km)
+        message = <'B', s, tag, vkB>
+    in
+    [St_A_4(A, id, ltkA, B, pkB, x, gy, s, km, tag, vkA)
+    , In(message)
+    ]
+  --[ Receive(A, B, message)
+    , Eq(verify(s, <'g'^x, gy>, pkB), true)
+    , Secret(A, B, km)
+    , Commit(A, B, <'I', 'R', km>)
+    ]->
+    [St_A_5(A, id, ltkA, B, pkB, x, gy)
+    ]
+
+
+
+
+// restrictions
+restriction Equality:
+	"All x y #i. Eq(x,y) @i ==> x = y"
+
+
+
+// security properties
+lemma injectiveagreementINITIATOR:
+  "All a b t #i.
+      Commit(a,b,<'I','R',t>)@i &
+      not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+      ==> (Ex #j. Running(b,a,<'I','R',t>)@j
+          & not (Ex a2 b2 #i2. Commit(a2,b2,<'I','R',t>)@i2
+          & not (#i2 = #i)))"
+
+lemma injectiveagreementRESPONDER:
+  "All a b t #i.
+      Commit(a,b,<'R','I',t>)@i &
+      not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+      ==> (Ex #j. Running(b,a,<'R','I',t>)@j
+          & not (Ex a2 b2 #i2. Commit(a2,b2,<'R','I',t>)@i2
+          & not (#i2 = #i)))"
+
+lemma secrecy:
+  "All A B x #i.
+      Secret(A,B,x)@i &
+      not ((Ex #r. Reveal(A)@r) | (Ex #r. Reveal(B)@r))
+      ==> not (Ex #j. K(x)@j)"
+
+lemma secrecy_PFS:
+  "All A B x #i.
+      Secret(A,B,x)@i &
+      not ((Ex #r. Reveal(A)@r & r < i) |
+      (Ex #r. Reveal(B)@r & r < i))
+      ==> not (Ex #j. K(x)@j)"
+
+
+lemma noninjectiveagreementINITIATOR:
+    "All a b t #i.
+        Commit(a,b,<'I','R',t>)@i &
+        not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+        ==> (Ex #j. Running(b,a,<'I','R',t>)@j)"
+
+lemma noninjectiveagreementRESPONDER:
+    "All a b t #i.
+        Commit(a,b,<'R','I',t>)@i &
+        not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+        ==> (Ex #j. Running(b,a,<'R','I',t>)@j)"
+
+
+end
