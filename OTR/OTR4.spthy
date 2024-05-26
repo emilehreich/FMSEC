@@ -141,6 +141,7 @@ rule B_4_Send:
   --[ Send(B, A, message)
     , Commit(B, A, <'R', 'I', km>)
     , Secret(B, A, km)
+    , Authenticated(B, A, km)
     ]->
     [St_B_5(B, id, ltkB, A, pkA, gx, y, s, km, tag, vkB)
     , Out(message)
@@ -159,6 +160,7 @@ rule A_4_Receive:
     , Eq(verify(s, <'g'^x, gy>, pkB), true)
     , Secret(A, B, km)
     , Commit(A, B, <'I', 'R', km>)
+    , Authenticated(A, B, km)
     ]->
     [St_A_5(A, id, ltkA, B, pkB, x, gy)
     ]
@@ -173,6 +175,12 @@ restriction Equality:
 
 
 // security properties
+lemma executable:
+  exists-trace
+    " Ex A B t #i #j.
+       Authenticated(A, B, t) @i & Authenticated(B, A, t) @j        
+       & not (Ex B #m. Reveal(B) @m) "
+
 lemma injectiveagreementINITIATOR:
   "All a b t #i.
       Commit(a,b,<'I','R',t>)@i &
