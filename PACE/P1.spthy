@@ -119,7 +119,7 @@ restriction KeyUnidirection:
 lemma Executability:
   exists-trace
     "Ex A B #i. 
-       Authenticated(A, B)@i & not (A = B)"
+       Authenticated(A, B)@i & not (A = B) & not (Ex A #j. Reveal(A) @j) "
 
 lemma injectiveagreementINITIATOR:
   "All a b t #i.
