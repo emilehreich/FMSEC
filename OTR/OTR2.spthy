@@ -107,6 +107,6 @@ lemma Executability:
 
 // Falsified Authentication Lemma
 lemma Authentication_Failure:
-    "Ex A B K i. CompleteI(A, B, K) @i & not (Ex j. CompleteR(B, A, K) @j)"
+    "Ex A B K #i. CompleteI(A, B, K) @#i & not (Ex #j. CompleteR(B, A, K) @#j)"
 
 end
