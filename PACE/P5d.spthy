@@ -5,7 +5,10 @@ section{* 1.5 PACE - Introducing Diffie-Hellman: The PACE protocol - unifiable *
 
 /*
   Protocol:
-
+    A → B : g^x, [s]kab
+	  B → A : g^y
+	  A → B : [g^x]kab
+	  B → A : [g^y ]ka
 
 */
 
