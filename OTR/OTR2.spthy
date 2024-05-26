@@ -105,7 +105,8 @@ lemma Executability:
     & not(Ex X #n. Reveal(X) @n)
     "
 
-// add falsified lemma for authentication failiure
-
+// Falsified Authentication Lemma
+lemma Authentication_Failure:
+    "Ex A B K i. CompleteI(A, B, K) @i & not (Ex j. CompleteR(B, A, K) @j)"
 
 end
