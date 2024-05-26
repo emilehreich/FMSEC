@@ -5,7 +5,10 @@ section{* 1.5 PACE - Introducing Diffie-Hellman: The PACE protocol *}
 
 /*
   Protocol:
-
+	A → B : gx, [s]kab
+	B → A : gy
+	A → B : [′A′,′ B′, gx]kab
+	B → A : [′B′,′ A′, gy ]ka
 
 */
 
@@ -196,18 +199,11 @@ restriction KeyUnidirection:
     UniDKey(B, A, k2)@i &
     not (A = B) ==> not (k1 = k2)"
 
-restriction UnidirectionalKeys:
-    "All a b c k1 k2 #i.
-      Create(a, b, c, k1, k2) @i
-      & k1 = k2
-        ==> F"
-    
-
 // Security Properties
 lemma Executability:
   exists-trace
     "Ex A B #i #j. 
-       Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j)"
+       Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j) & not (Ex A #j. Reveal(A) @j)"
 
 lemma injectiveagreementINITIATOR:
   "All a b t #i.
@@ -240,4 +236,3 @@ lemma secrecy_PFS:
         
 
 end
-
