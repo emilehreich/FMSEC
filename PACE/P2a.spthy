@@ -163,11 +163,14 @@ restriction KeyUnidirection:
 
 
 // Security Properties
+
+// Verified
 lemma Executability:
   exists-trace
     "Ex A B #i #j. 
        Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j) & not (Ex A #j. Reveal(A) @j)"
 
+// Falsified
 lemma injectiveagreementINITIATOR:
   "All a b t #i.
       Commit(a,b,<'I','R',t>)@i &
@@ -176,6 +179,7 @@ lemma injectiveagreementINITIATOR:
           & not (Ex a2 b2 #i2. Commit(a2,b2,<'I','R',t>)@i2
           & not (#i2 = #i)))"
 
+// Falsified
 lemma injectiveagreementRESPONDER:
   "All a b t #i.
       Commit(a,b,<'R','I',t>)@i &

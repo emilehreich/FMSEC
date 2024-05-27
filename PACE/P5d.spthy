@@ -195,11 +195,14 @@ restriction KeyUnidirection:
     
 
 // Security Properties
+
+// Verified
 lemma Executability:
   exists-trace
     "Ex A B #i #j. 
        Authenticated(A, B)@i & Authenticated(B, A)@j & not (A = B) & not (#i = #j) & not (Ex A #j. Reveal(A) @j)"
 
+// Verified
 lemma injectiveagreementINITIATOR:
   "All a b t #i.
       Commit(a,b,<'I','R',t>)@i &
@@ -208,6 +211,7 @@ lemma injectiveagreementINITIATOR:
           & not (Ex a2 b2 #i2. Commit(a2,b2,<'I','R',t>)@i2
           & not (#i2 = #i)))"
 
+// Verified
 lemma injectiveagreementRESPONDER:
   "All a b t #i.
       Commit(a,b,<'R','I',t>)@i &
@@ -216,12 +220,14 @@ lemma injectiveagreementRESPONDER:
           & not (Ex a2 b2 #i2. Commit(a2,b2,<'R','I',t>)@i2
           & not (#i2 = #i)))"
 
+// Verified
 lemma secrecy:
   "All A B x #i.
       Secret(A,B,x)@i &
       not ((Ex #r. Reveal(A)@r) | (Ex #r. Reveal(B)@r))
       ==> not (Ex #j. K(x)@j)"
 
+// Verified
 lemma secrecy_PFS:
   "All A B x #i.
       Secret(A,B,x)@i &
@@ -229,13 +235,14 @@ lemma secrecy_PFS:
       (Ex #r. Reveal(B)@r & r < i))
       ==> not (Ex #j. K(x)@j)"
 
-
+// Verified
 lemma noninjectiveagreementINITIATOR:
     "All a b t #i.
         Commit(a,b,<'I','R',t>)@i &
         not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
         ==> (Ex #j. Running(b,a,<'I','R',t>)@j)"
 
+// Verified
 lemma noninjectiveagreementRESPONDER:
     "All a b t #i.
         Commit(a,b,<'R','I',t>)@i &

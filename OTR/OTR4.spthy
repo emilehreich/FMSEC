@@ -22,7 +22,11 @@ equations:
     vfy(k, mac(k, msg), msg) = true
 
 rule Register_Keys:
-    [Fr(~ltk)]-->[!Ltk($A, ~ltk), !Pk($A, pk(~ltk)), Out(pk(~ltk))]
+    [Fr(~ltk)
+    ]
+  --[RLTK($A, ~ltk)
+    ]->
+    [!Ltk($A, ~ltk), !Pk($A, pk(~ltk)), Out(pk(~ltk))]
 
 rule Reveal_ltk:
     [ !Ltk(A, ltk)
@@ -173,16 +177,19 @@ restriction Equality:
 	"All x y #i. Eq(x,y) @i ==> x = y"
 
 restriction Key_Uniqueness:
-    "!Ltk(A, x) @i & !Ltk(A, y) @j ==> x = y"
+  "All A x y #i #j. RLTK(A, x) @i & RLTK(A, y) @j ==> x = y"
 
 
 // security properties
+
+// Verified
 lemma executable:
   exists-trace
     " Ex A B t #i #j.
        Authenticated(A, B, t) @i & Authenticated(B, A, t) @j      
        & not (Ex B #m. Reveal(B) @m) "
 
+// Verified
 lemma injectiveagreementINITIATOR:
   "All a b t #i.
       Commit(a,b,<'I','R',t>)@i &
@@ -191,6 +198,7 @@ lemma injectiveagreementINITIATOR:
           & not (Ex a2 b2 #i2. Commit(a2,b2,<'I','R',t>)@i2
           & not (#i2 = #i)))"
 
+// Falsified
 lemma injectiveagreementRESPONDER:
   "All a b t #i.
       Commit(a,b,<'R','I',t>)@i &
@@ -199,12 +207,14 @@ lemma injectiveagreementRESPONDER:
           & not (Ex a2 b2 #i2. Commit(a2,b2,<'R','I',t>)@i2
           & not (#i2 = #i)))"
 
+// Verified
 lemma secrecy:
   "All A B x #i.
       Secret(A,B,x)@i &
       not ((Ex #r. Reveal(A)@r) | (Ex #r. Reveal(B)@r))
       ==> not (Ex #j. K(x)@j)"
 
+// Verified
 lemma secrecy_PFS:
   "All A B x #i.
       Secret(A,B,x)@i &
@@ -212,13 +222,14 @@ lemma secrecy_PFS:
       (Ex #r. Reveal(B)@r & r < i))
       ==> not (Ex #j. K(x)@j)"
 
-
+// Verified
 lemma noninjectiveagreementINITIATOR:
     "All a b t #i.
         Commit(a,b,<'I','R',t>)@i &
         not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
         ==> (Ex #j. Running(b,a,<'I','R',t>)@j)"
 
+// Falsified
 lemma noninjectiveagreementRESPONDER:
     "All a b t #i.
         Commit(a,b,<'R','I',t>)@i &

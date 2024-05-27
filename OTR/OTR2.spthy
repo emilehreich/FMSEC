@@ -5,8 +5,8 @@ section{* 2.2 OTR - Authentication Failure *}
 
 /*
     Protocol
-        A → B : Sign_skA (g^x, A), pkA
-        B → A : Sign_skB (g^y, B), pkB
+        A → B : '1', Sign_skA ('initiator', g^x, A), pkA
+        B → A : '2', Sign_skB ('responder', g^y, B), pkB
         
 */
 
@@ -17,7 +17,11 @@ builtins:
 // Public Key Infrastructure
 
 rule Register_Keys:
-    [Fr(~ltk)]-->[!Ltk($A, ~ltk), !Pk($A, pk(~ltk)), Out(pk(~ltk))]
+    [Fr(~ltk)
+    ]
+  --[RLTK($A, ~ltk)
+    ]->
+    [!Ltk($A, ~ltk), !Pk($A, pk(~ltk)), Out(pk(~ltk))]
 
 rule Reveal_ltk:
     [ !Ltk(A, ltk)
@@ -35,7 +39,8 @@ rule Init_A:
     , !Ltk(A, ltkA)
     , !Pk(B, pkB)
     ]
-  --[ Create(A, ~id, 'Alice')
+  --[ Create(A, ~id)
+    , Unique(A)
     ]->
     [ St_A_1(A, ~id, ltkA, B, pkB)
     ]
@@ -45,7 +50,8 @@ rule Init_B:
     , !Ltk(B, ltkB)
     , !Pk(A, pkA)
     ]
-  --[ Create(B, ~id, 'Bob')
+  --[ Create(B, ~id)
+    , Unique(B)
     ]->
     [ St_B_1(B, ~id, ltkB, A, pkA)
     ]
@@ -54,18 +60,20 @@ rule A_1_Send:
     [ St_A_1(A, id, ltkA, B, pkB)
     , Fr(~x)
     ]
-  --[ Send(A, B, <'g'^~x, sign(<'g'^~x, A>, ltkA), pk(ltkA)>)
+  --[ Send(A, B, <'1', 'g'^~x, sign(<'initiator','g'^~x, A>, ltkA), pk(ltkA)>)
+    , Running(A, B, <'R', 'I', 'g'^~x>)
     ]->
     [ St_A_2(A, id, ltkA, B, pkB, ~x)
-    , Out(<'g'^~x, sign(<'g'^~x, A>, ltkA), pk(ltkA)>)
+    , Out(<'1', 'g'^~x, sign(<'initiator','g'^~x, A>, ltkA), pk(ltkA)>)
     ]
 
 rule B_1_Receive:
     [ St_B_1(B, id, ltkB, A, pkA)
-    , In(<gx, s, pkA>)
+    , In(<'1', gx, s, pkA>)
     ]
-  --[ Receive(B, A, <gx, s, pkA>)
-    , Eq(verify(s, <gx, A>, pkA), true)
+  --[ Receive(B, A, <'1', gx, s, pkA>)
+    , Eq(verify(s, <'initiator', gx, A>, pkA), true)
+    , Commit(B, A, <'R', 'I', gx>)
     ]->
     [ St_B_2(B, id, ltkB, A, pkA, gx)
     ]
@@ -74,19 +82,22 @@ rule B_2_Send:
     [ St_B_2(B, id, ltkB, A, pkA, gx)
     , Fr(~y)
     ]
-  --[ Send(B, A, <'g'^~y, sign(<'g'^~y, B>, ltkB), pk(ltkB)>)
+  --[ Send(B, A, <'2', 'g'^~y, sign(<'responder', 'g'^~y, B>, ltkB), pk(ltkB)>)
+    , Running(B, A, <'I', 'R', gx^~y>)
+    , Authenticated(B, A, gx^~y)
     ]->
     [ St_B_3(B, id, ltkB, A, pkA, ~y)
-    , Out(<'g'^~y, sign(<'g'^~y, B>, ltkB), pk(ltkB)>)
+    , Out(<'2', 'g'^~y, sign(<'responder','g'^~y, B>, ltkB), pk(ltkB)>)
     ]
 
 rule A_2_Receive:
     [ St_A_2(A, id, ltkA, B, pkB, x)
-    , In(<gy, s, pkB>)
+    , In(<'2', gy, s, pkB>)
     ]
-  --[ Receive(A, B, <gy, s, pkB>)
-    , Eq(verify(s, <gy, B>, pkB), true)
-    , Authenticated(A, B)
+  --[ Receive(A, B, <'2', gy, s, pkB>)
+    , Eq(verify(s, <'responder', gy, B>, pkB), true)
+    , Commit(A, B, <'I', 'R', gy^x>)
+    , Authenticated(A, B, gy^x)
     ]->
     [ St_A_3(A, id, ltkA, B, pkB, x, gy)
     ]
@@ -96,17 +107,34 @@ rule A_2_Receive:
 restriction Equality:
 	"All x y #i. Eq(x,y) @i ==> x = y"
 
+restriction Key_Uniqueness:
+  "All A x y #i #j. RLTK(A, x) @i & RLTK(A, y) @j ==> x = y"
+
+restriction Participants_Uniqueness:
+  "All X #i #j. Unique(X) @i & Unique(X) @j ==> #i = #j"
+
 // Security Properties
-lemma Executability:
+
+// Verified
+lemma executable:
   exists-trace
-    "Ex a b #i. Authenticated(a, b) @i & not (a = b)
-    & (All C D id1 id2 #j #k. Create(C, id1, 'Alice') @j & Create(D, id2, 'Alice') @k ==> id1 = id2)
-    & (All E F id3 id4 #l #m. Create(E, id3, 'Bob') @l & Create(F, id4, 'Bob') @m ==> id3 = id4)
-    & not(Ex X #n. Reveal(X) @n)
+    "Ex A B t #i #j.
+        Authenticated(A, B, t) @i & Authenticated(B, A, t) @j 
+        & (All A #k #l. Unique(A) @k & Unique(A) @l ==> #k=#l)   
+        & not (Ex B #m. Reveal(B) @m)
     "
 
-// Falsified Authentication Lemma
+// Attack on Authentication - Verified
 lemma Authentication_Failure:
-    "Ex A B K #i. CompleteI(A, B, K) @#i & not (Ex #j. CompleteR(B, A, K) @#j)"
+  exists-trace
+    " Ex a b c t #i #j.
+         Running(b, c, <'I', 'R', t>) @j
+        & Commit(a, b, <'I', 'R', t>) @i 
+        & #j < #i
+       & not (Ex #k. Reveal(a) @k)
+       & not (Ex #u. Reveal(b) @u)
+       & not (Ex id1 #v. Create(c, id1) @v)
+       & not (Ex id2 #w. Create(c, id2) @w)
+    "
 
 end

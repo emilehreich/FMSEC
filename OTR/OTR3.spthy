@@ -5,8 +5,8 @@ section{* 2.3 OTR - Improvement *}
 
 /*
     Protocol
-        A → B : Sign_skA (g^x), pkA
-        B → A : Sign_skB (g^y), pkB
+        A → B : '1', g^x, Sign_skA ('initiator', g^x, B), vkA
+        B → A : '2', g^y, Sign_skB ('responder', g^y, A), vkB
         
 */
 
@@ -17,7 +17,12 @@ builtins:
 // Public Key Infrastructure
 
 rule Register_Keys:
-    [Fr(~ltk)]-->[!Ltk($A, ~ltk), !Pk($A, pk(~ltk)), Out(pk(~ltk))]
+    [Fr(~ltk)
+    ]
+  --[RLTK($A, ~ltk)
+    ]->
+    [!Ltk($A, ~ltk), !Pk($A, pk(~ltk)), Out(pk(~ltk))]
+
 
 rule Reveal_ltk:
     [ !Ltk(A, ltk)
@@ -54,18 +59,20 @@ rule A_1_Send:
     [ St_A_1(A, id, ltkA, B, pkB)
     , Fr(~x)
     ]
-  --[ Send(A, B, <'g'^~x, sign('g'^~x, ltkA), pk(ltkA)>)
+  --[ Send(A, B, <'1', 'g'^~x, sign(<'initiator', 'g'^~x, B>, ltkA), pk(ltkA)>)
+    , Running(A, B, <'R', 'I', 'g'^~x>)
     ]->
     [ St_A_2(A, id, ltkA, B, pkB, ~x)
-    , Out(<'g'^~x, sign('g'^~x, ltkA), pk(ltkA)>)
+    , Out(<'1', 'g'^~x, sign(<'initiator', 'g'^~x, B>, ltkA), pk(ltkA)>)
     ]
 
 rule B_1_Receive:
     [ St_B_1(B, id, ltkB, A, pkA)
-    , In(<gx, s, pkA>)
+    , In(<'1', gx, s, pkA>)
     ]
   --[ Receive(B, A, <gx, s, pkA>)
-    , Eq(verify(s, gx, pkA), true)
+    , Eq(verify(s, <'initiator', gx, B>, pkA), true)
+    , Commit(B, A, <'R', 'I', gx>)
     ]->
     [ St_B_2(B, id, ltkB, A, pkA, gx)
     ]
@@ -74,18 +81,22 @@ rule B_2_Send:
     [ St_B_2(B, id, ltkB, A, pkA, gx)
     , Fr(~y)
     ]
-  --[ Send(B, A, <'g'^~y, sign('g'^~y, ltkB), pk(ltkB)>)
+  --[ Send(B, A, <'2', 'g'^~y, sign(<'responder', 'g'^~y, A>, ltkB), pk(ltkB)>)
+    , Running(B, A, <'I', 'R', gx^~y>)
+    , Secret(B, A, gx^~y)
     ]->
     [ St_B_3(B, id, ltkB, A, pkA, ~y)
-    , Out(<'g'^~y, sign('g'^~y, ltkB), pk(ltkB)>)
+    , Out(<'2', 'g'^~y, sign(<'responder','g'^~y, A>, ltkB), pk(ltkB)>)
     ]
 
 rule A_2_Receive:
     [ St_A_2(A, id, ltkA, B, pkB, x)
-    , In(<gy, s, pkB>)
+    , In(<'2', gy, s, pkB>)
     ]
   --[ Receive(A, B, <gy, s, pkB>)
-    , Eq(verify(s, gy, pkB), true)
+    , Eq(verify(s, <'responder', gy, A>, pkB), true)
+    , Commit(A, B, <'I', 'R', gy^x>)
+    , Secret(A, B, gy^x)
     , Authenticated(A, B)
     ]->
     [ St_A_3(A, id, ltkA, B, pkB, x, gy)
@@ -96,7 +107,12 @@ rule A_2_Receive:
 restriction Equality:
 	"All x y #i. Eq(x,y) @i ==> x = y"
 
+restriction Key_Uniqueness:
+  "All A x y #i #j. RLTK(A, x) @i & RLTK(A, y) @j ==> x = y"
+
 // Security Properties
+
+// Verified
 lemma Executability:
   exists-trace
     "Ex a b #i. Authenticated(a, b) @i & not (a = b)
@@ -105,7 +121,52 @@ lemma Executability:
     & not(Ex X #n. Reveal(X) @n)
     "
 
+// Falsified
+lemma injectiveagreementINITIATOR:
+    "All a b t #i.
+        Commit(a,b,<'I','R',t>)@i &
+        not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+        ==> (Ex #j. Running(b,a,<'I','R',t>)@j
+            & not (Ex a2 b2 #i2. Commit(a2,b2,<'I','R',t>)@i2
+            & not (#i2 = #i)))"
 
-// add lemma for authentication
+// Falsified
+lemma injectiveagreementRESPONDER:
+    "All a b t #i.
+        Commit(a,b,<'R','I',t>)@i &
+        not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+        ==> (Ex #j. Running(b,a,<'R','I',t>)@j
+            & not (Ex a2 b2 #i2. Commit(a2,b2,<'R','I',t>)@i2
+            & not (#i2 = #i)))"
+  
+// Verified
+lemma secrecy:
+    "All A B x #i.
+        Secret(A,B,x)@i &
+        not ((Ex #r. Reveal(A)@r) | (Ex #r. Reveal(B)@r))
+        ==> not (Ex #j. K(x)@j)"
+  
+// Verified
+lemma secrecy_PFS:
+    "All A B x #i.
+        Secret(A,B,x)@i &
+        not ((Ex #r. Reveal(A)@r & r < i) |
+        (Ex #r. Reveal(B)@r & r < i))
+        ==> not (Ex #j. K(x)@j)"
+  
+// Falsified
+lemma noninjectiveagreementINITIATOR:
+      "All a b t #i.
+          Commit(a,b,<'I','R',t>)@i &
+          not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+          ==> (Ex #j. Running(b,a,<'I','R',t>)@j)"
+  
+// Verified
+lemma noninjectiveagreementRESPONDER:
+      "All a b t #i.
+          Commit(a,b,<'R','I',t>)@i &
+          not ((Ex #r. Reveal(a)@r) | (Ex #r. Reveal(b)@r))
+          ==> (Ex #j. Running(b,a,<'R','I',t>)@j)"
+
 
 end

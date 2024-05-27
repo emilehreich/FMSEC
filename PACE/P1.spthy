@@ -116,11 +116,14 @@ restriction KeyUnidirection:
     ==> (A = B)"
 
 // Security Properties
+
+// Verified
 lemma Executability:
   exists-trace
     "Ex A B #i. 
        Authenticated(A, B)@i & not (A = B) & not (Ex A #j. Reveal(A) @j) "
 
+// Verified
 lemma injectiveagreementINITIATOR:
   "All a b t #i.
       Commit(a,b,<'I','R',t>)@i &
